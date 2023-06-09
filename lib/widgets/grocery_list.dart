@@ -19,6 +19,7 @@ class _GroceryListState extends State<GroceryList> {
   String? _error;
   List<GroceryItem> _groceryItems = [];
   bool _isLoading = true;
+  //late Future<List<GroceryItem>> _loadedItems;
 
   @override
   void initState() {//initState cant be marked as async instead we can mark other function as await and call that here
@@ -26,21 +27,25 @@ class _GroceryListState extends State<GroceryList> {
     super.initState();
     print('inside initState');
     _loadItems();
+    //_loadedItems = _loadItems();//if this is given to future directlu in body it executes each time build re executes
+    //but thats not wt we want,we want to load this only when build executes for first time,so initState is best
     print('ending initState');
   }
 
+  //Future<List<GroceryItem>> 
   void _loadItems() async{
     final url = Uri.
       https(
         'shopping-list-app-9701b-default-rtdb.asia-southeast1.firebasedatabase.app',
         'shopping-list.json'
       );
-    try{
+    try{//erros are handled differently in futurebuilder
       final response = await http.get(url);
       print('respone body goes here');
       print(response.body);//nested map,as string
       if(response.statusCode>=400){
         print('status code >= 400');
+        //throw Exception('Unable to fetch data.Please try again later.');
         setState(() {
           //await Future.delayed(const Duration(seconds: 5));//JUST TO OBSERVE THE ERROR MSG ON SCREEN 
           print('inside setState');
@@ -53,6 +58,7 @@ class _GroceryListState extends State<GroceryList> {
           _isLoading = false;
         });
         return;
+        //return [];//retun empty list in this case
       }
       final Map<String,dynamic> listData = json.decode(response.body);//dynamic 
       //Map<String,Map<String,dynamic>> =>Unhandled Exception: type '_Map<String, dynamic>' is not a subtype of type 'Map<String, Map<String, dynamic>>'
@@ -73,6 +79,8 @@ class _GroceryListState extends State<GroceryList> {
         _isLoading = false;
       });
       print('loaded items');
+     // return loadedItems;
+      
     }catch(exception){
       print('caught the exception');
       print(exception);
@@ -202,3 +210,41 @@ class _GroceryListState extends State<GroceryList> {
     );
   }
 }
+/*
+FutureBuilder(
+        future: _loadedItems,
+        builder: (context, snapshot) {
+          if(snapshot.connectionState == ConnectionState.active){
+            return const Center(child: CircularProgressIndicator());//for buffering
+          }
+          if(snapshot.hasError){
+            print('error encountered');
+            return content = Center( 
+              child: Text(snapshot.error.toString()),
+            );
+            }
+          if(snapshot.data!.isEmpty){
+            return const Center( 
+              child: Text('No items added yet!')
+            )
+          }
+          ListView.builder(
+        itemCount: _groceryItems.length,
+        itemBuilder: (context, index) => Dismissible(
+          key: ValueKey(_groceryItems[index].id),
+          onDismissed: (direction){
+            _removeItem(_groceryItems[index]);
+          } ,
+          child: ListTile( 
+            leading: Container(
+              width: 24,
+              height: 24,
+              color: _groceryItems[index].category.color,
+            ),
+            title: Text(_groceryItems[index].name),
+            trailing: Text(_groceryItems[index].quantity.toString()),
+          ),
+        )
+      );
+          },
+      )*/
